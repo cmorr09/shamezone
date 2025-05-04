@@ -2,12 +2,14 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { useGoals } from '../contexts/GoalsContext';
+import { useSettings } from '../contexts/SettingsContext';
 
 type Tone = 'soft' | 'tryMe' | 'nuclear';
 
@@ -54,6 +56,9 @@ export default function ToneScreen() {
   const [selectedTone, setSelectedTone] = useState<Tone>('soft');
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedTime, setSelectedTime] = useState(new Date());
+  const { setSettings } = useSettings();
+  const { setGoals } = useGoals();
+  const router = useRouter();
 
   const handleTimeChange = (event: any, selectedDate?: Date) => {
     setShowTimePicker(false);
@@ -62,19 +67,29 @@ export default function ToneScreen() {
     }
   };
 
-  const router = useRouter();
-
-const handleStartAccountability = () => {
-  console.log('Selected tone:', selectedTone);
-  console.log('Selected time:', selectedTime);
-  router.push('/home');
-};
-
+  const handleStartAccountability = () => {
+    const timeValue = selectedTone === 'nuclear' ? null : selectedTime;
+  
+    setSettings({
+      tone: selectedTone,
+      time: timeValue,
+      testMode: false,
+    });
+  
+    setGoals((prevGoals) =>
+      prevGoals.map((goal) => ({
+        ...goal,
+        time: timeValue,
+      }))
+    );
+  
+    router.push('/home');
+  };  
 
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Choose Your Tone</Text>
-      
+
       {toneOptions.map((tone) => (
         <TouchableOpacity
           key={tone.id}
@@ -88,7 +103,7 @@ const handleStartAccountability = () => {
             <Text style={styles.toneTitle}>{tone.title}</Text>
             <Text style={styles.toneDescription}>{tone.description}</Text>
           </View>
-          
+
           <View style={styles.sampleContainer}>
             <Text style={styles.sampleLabel}>Sample Message:</Text>
             <Text style={styles.sampleMessage}>

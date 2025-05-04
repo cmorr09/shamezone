@@ -1,5 +1,7 @@
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+    Alert,
     ScrollView,
     StyleSheet,
     Text,
@@ -7,8 +9,13 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import nuclearInsults from '../../assets/insults/nuclear.json';
+import softInsults from '../../assets/insults/soft.json';
+import tryMeInsults from '../../assets/insults/tryMe.json';
+import { useGoals } from '../../contexts/GoalsContext';
+import { scheduleNotification } from '../../lib/notifications';
+import { useSettings } from '../contexts/SettingsContext';
 
-// Placeholder icon components
 const FlameIcon = () => (
   <View style={[styles.icon, { backgroundColor: '#FF3B3B' }]}>
     <Text style={styles.iconText}>🔥</Text>
@@ -27,47 +34,43 @@ const ArchiveIcon = () => (
   </View>
 );
 
-interface Goal {
-  id: string;
-  title: string;
-  category: 'Work' | 'Health' | 'Personal';
-  target: number;
-  current: number;
-  deadline: Date;
-  lastLogged: Date | null;
-  streak: number;
-}
-
 export default function HomeScreen() {
-  const [goals, setGoals] = useState<Goal[]>([
-    {
-      id: '1',
-      title: 'Daily Steps',
-      category: 'Health',
-      target: 10000,
-      current: 6500,
-      deadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      lastLogged: new Date(Date.now() - 12 * 60 * 60 * 1000),
-      streak: 3,
-    },
-    {
-      id: '2',
-      title: 'Code Review',
-      category: 'Work',
-      target: 5,
-      current: 5,
-      deadline: new Date(Date.now() + 48 * 60 * 60 * 1000),
-      lastLogged: new Date(Date.now() - 36 * 60 * 60 * 1000),
-      streak: 0,
-    },
-  ]);
+  const { goals, updateGoalProgress } = useGoals();
+  const { tone } = useSettings();
+  const router = useRouter();
 
   const [logValues, setLogValues] = useState<{ [key: string]: string }>({});
 
-  const getProgressPercentage = (current: number, target: number) => {
-    return Math.min(Math.round((current / target) * 100), 100);
+  const getProgressPercentage = (progress: number, target: number) => {
+    return Math.min(Math.round((progress / target) * 100), 100);
   };
-
+  const scheduleNextNotification = async (goal: any) => {
+    const now = new Date();
+    const fireDate = new Date(now);
+    fireDate.setDate(now.getDate() + 1);
+  
+    if (tone === "I'm soft") {
+      fireDate.setHours(9 + Math.floor(Math.random() * 1));
+    } else if (tone === "try me") {
+      fireDate.setHours(12 + Math.floor(Math.random() * 4));
+    } else if (tone === "nuclear") {
+      fireDate.setHours(7 + Math.floor(Math.random() * (23 - 7)));
+    }
+  
+    fireDate.setMinutes(Math.floor(Math.random() * 60));
+    fireDate.setSeconds(0);
+    fireDate.setMilliseconds(0);
+  
+    let pool = softInsults;
+    if (tone === "try me") pool = tryMeInsults;
+    if (tone === "nuclear") pool = nuclearInsults;
+  
+    const template = pool[Math.floor(Math.random() * pool.length)];
+    const message = template.replace('{goal}', goal.title);
+  
+    await scheduleNotification(message, fireDate);
+  };
+  
   const getTimeRemaining = (deadline: Date) => {
     const now = new Date();
     const diff = deadline.getTime() - now.getTime();
@@ -76,48 +79,71 @@ export default function HomeScreen() {
     return `${hours}h ${minutes}m`;
   };
 
-  const getStatusIcon = (goal: Goal) => {
-    if (goal.current >= goal.target) return <ArchiveIcon />;
+  const getStatusIcon = (goal: any) => {
+    if (goal.progress >= goal.target) return <ArchiveIcon />;
     if (!goal.lastLogged) return <IceIcon />;
-    
+
     const lastLogged = new Date(goal.lastLogged);
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     return lastLogged > yesterday ? <FlameIcon /> : <IceIcon />;
   };
 
-  const handleLog = (goalId: string) => {
-    const value = parseFloat(logValues[goalId] || '0');
-    if (isNaN(value)) return;
+  const checkIfOnTime = (now: Date, target: Date, tone: string) => {
+    const diff = Math.abs(now.getTime() - target.getTime());
+    if (tone === "I'm soft") return diff <= 60 * 60 * 1000;
+    if (tone === "try me") return diff <= 4 * 60 * 60 * 1000;
+    if (tone === "nuclear") {
+      const hour = now.getHours();
+      return hour >= 7 && hour <= 23;
+    }
+    return false;
+  };
 
-    setGoals(goals.map(goal => {
-      if (goal.id === goalId) {
-        return {
-          ...goal,
-          current: Math.min(goal.current + value, goal.target),
-          lastLogged: new Date(),
-        };
-      }
-      return goal;
-    }));
+  const getRoast = (tone: string) => {
+    if (tone === "I'm soft") return "Maybe later… or not.";
+    if (tone === "try me") return "Still ignoring this? Prove you're not a quitter.";
+    if (tone === "nuclear") return "‘This’ is still undone. Pathetic.";
+    return "Not impressed.";
+  };
+
+  const handleLog = async (goalId: string, goalTime: Date) => {
+    const value = parseFloat(logValues[goalId] || '0');
+    if (isNaN(value) || value <= 0) return;
+
+    const now = new Date();
+    const isOnTime = checkIfOnTime(now, goalTime, tone);
+
+    updateGoalProgress(goalId, value);
     setLogValues({ ...logValues, [goalId]: '' });
+
+    const goal = goals.find(g => g.id === goalId);
+    if (goal) await scheduleNextNotification(goal);
+    
+    if (isOnTime) {
+      router.push(`/celebrate/${goalId}`);
+    } else {
+      Alert.alert('Late...', `Too little, too late.\n\n${getRoast(tone)}`);
+    }
+    
   };
 
   const handlePreviewNotification = () => {
-    // TODO: Implement notification preview
-    console.log('Preview notification');
+    Alert.alert('Preview', 'Next notification previewed (Test Mode)');
   };
 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView}>
         <Text style={styles.title}>Your Goals</Text>
-        
+
         {goals.map((goal) => {
-          const progress = getProgressPercentage(goal.current, goal.target);
-          const timeRemaining = getTimeRemaining(goal.deadline);
-          
+          const progress = getProgressPercentage(goal.progress, goal.target);
+          const timeRemaining = goal.deadline
+            ? getTimeRemaining(new Date(goal.deadline))
+            : 'No deadline';
+
           return (
             <View key={goal.id} style={styles.goalCard}>
               <View style={styles.goalHeader}>
@@ -130,11 +156,8 @@ export default function HomeScreen() {
 
               <View style={styles.progressContainer}>
                 <View style={styles.progressBar}>
-                  <View 
-                    style={[
-                      styles.progressFill,
-                      { width: `${progress}%` }
-                    ]} 
+                  <View
+                    style={[styles.progressFill, { width: `${progress}%` }]}
                   />
                 </View>
                 <Text style={styles.progressText}>{progress}% complete</Text>
@@ -143,23 +166,23 @@ export default function HomeScreen() {
               <View style={styles.logContainer}>
                 <TextInput
                   style={styles.logInput}
-                  value={logValues[goal.id]}
-                  onChangeText={(text) => setLogValues({ ...logValues, [goal.id]: text })}
+                  value={logValues[goal.id] || ''}
+                  onChangeText={(text) =>
+                    setLogValues({ ...logValues, [goal.id]: text })
+                  }
                   placeholder="Enter progress"
                   placeholderTextColor="#888888"
                   keyboardType="numeric"
                 />
                 <TouchableOpacity
                   style={styles.logButton}
-                  onPress={() => handleLog(goal.id)}
+                  onPress={() => handleLog(goal.id, goal.time)}
                 >
                   <Text style={styles.logButtonText}>Log</Text>
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.timeRemaining}>
-                {timeRemaining} remaining
-              </Text>
+              <Text style={styles.timeRemaining}>{timeRemaining} remaining</Text>
             </View>
           );
         })}
@@ -174,7 +197,10 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         {goals.length < 3 && (
-          <TouchableOpacity style={styles.footerButton}>
+          <TouchableOpacity
+            style={styles.footerButton}
+            onPress={() => router.push('/setup')}
+          >
             <Text style={styles.footerButtonText}>Add / Edit Goals</Text>
           </TouchableOpacity>
         )}
