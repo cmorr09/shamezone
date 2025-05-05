@@ -1,18 +1,24 @@
 import Constants from 'expo-constants';
 import React from 'react';
 import {
-    Linking,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSettings } from '../../contexts/SettingsContext';
 
 export default function ProfileScreen() {
-  const { tone, time, testMode, setTestMode } = useSettings();
+  const {
+    tone,
+    notificationHour,
+    notificationMinute,
+    testMode,
+    setTestMode,
+  } = useSettings();
 
   const handleOpenURL = (url: string) => {
     Linking.openURL(url);
@@ -22,6 +28,13 @@ export default function ProfileScreen() {
     // TODO: Implement account deletion
     console.log('Delete account');
   };
+
+  const formattedTime =
+    notificationHour !== null && notificationMinute !== null
+      ? `${notificationHour.toString().padStart(2, '0')}:${notificationMinute
+          .toString()
+          .padStart(2, '0')}`
+      : 'Random (7am–11pm)';
 
   return (
     <ScrollView style={styles.container}>
@@ -47,11 +60,7 @@ export default function ProfileScreen() {
 
           <View style={styles.settingRow}>
             <Text style={styles.settingLabel}>Time Window</Text>
-            <Text style={styles.settingValue}>
-              {time
-                ? time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                : 'Random (7am–11pm)'}
-            </Text>
+            <Text style={styles.settingValue}>{formattedTime}</Text>
           </View>
 
           <View style={styles.settingRow}>
