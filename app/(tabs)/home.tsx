@@ -1,20 +1,19 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import nuclearInsults from '../../assets/insults/nuclear.json';
 import softInsults from '../../assets/insults/soft.json';
 import tryMeInsults from '../../assets/insults/tryMe.json';
 import { useGoals } from '../../contexts/GoalsContext';
-import { scheduleNotification } from '../../lib/notifications';
-import { useSettings } from '../contexts/SettingsContext';
+import { useSettings } from '../../contexts/SettingsContext';
 
 const FlameIcon = () => (
   <View style={[styles.icon, { backgroundColor: '#FF3B3B' }]}>
@@ -44,33 +43,34 @@ export default function HomeScreen() {
   const getProgressPercentage = (progress: number, target: number) => {
     return Math.min(Math.round((progress / target) * 100), 100);
   };
+
   const scheduleNextNotification = async (goal: any) => {
     const now = new Date();
     const fireDate = new Date(now);
     fireDate.setDate(now.getDate() + 1);
-  
-    if (tone === "I'm soft") {
+
+    if (tone === "soft") {
       fireDate.setHours(9 + Math.floor(Math.random() * 1));
-    } else if (tone === "try me") {
+    } else if (tone === "tryMe") {
       fireDate.setHours(12 + Math.floor(Math.random() * 4));
     } else if (tone === "nuclear") {
       fireDate.setHours(7 + Math.floor(Math.random() * (23 - 7)));
     }
-  
+
     fireDate.setMinutes(Math.floor(Math.random() * 60));
     fireDate.setSeconds(0);
     fireDate.setMilliseconds(0);
-  
+
     let pool = softInsults;
-    if (tone === "try me") pool = tryMeInsults;
+    if (tone === "tryMe") pool = tryMeInsults;
     if (tone === "nuclear") pool = nuclearInsults;
-  
+
     const template = pool[Math.floor(Math.random() * pool.length)];
     const message = template.replace('{goal}', goal.title);
-  
-    await scheduleNotification(message, fireDate);
+
+    await scheduleNextNotification(goal);
   };
-  
+
   const getTimeRemaining = (deadline: Date) => {
     const now = new Date();
     const diff = deadline.getTime() - now.getTime();
@@ -111,23 +111,22 @@ export default function HomeScreen() {
   const handleLog = async (goalId: string, goalTime: Date) => {
     const value = parseFloat(logValues[goalId] || '0');
     if (isNaN(value) || value <= 0) return;
-
+  
     const now = new Date();
     const isOnTime = checkIfOnTime(now, goalTime, tone);
-
-    updateGoalProgress(goalId, value);
+  
+    const goalCompleted = updateGoalProgress(goalId, value);
     setLogValues({ ...logValues, [goalId]: '' });
-
-    const goal = goals.find(g => g.id === goalId);
+  
+    const goal = goals.find((g) => g.id === goalId);
     if (goal) await scheduleNextNotification(goal);
-    
-    if (isOnTime) {
-      router.push(`/celebrate/${goalId}`);
-    } else {
+  
+    if (goalCompleted && isOnTime) {
+      router.push({ pathname: `/celebrate/${goalId}` } as any);
+    } else if (!isOnTime) {
       Alert.alert('Late...', `Too little, too late.\n\n${getRoast(tone)}`);
     }
-    
-  };
+  };  
 
   const handlePreviewNotification = () => {
     Alert.alert('Preview', 'Next notification previewed (Test Mode)');
@@ -186,6 +185,13 @@ export default function HomeScreen() {
             </View>
           );
         })}
+
+        <TouchableOpacity
+          onPress={() => router.push('../home/archive')}
+          style={styles.archiveButton}
+        >
+          <Text style={styles.archiveButtonText}>View Archived Goals</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       <View style={styles.footer}>
@@ -299,6 +305,18 @@ const styles = StyleSheet.create({
   timeRemaining: {
     fontSize: 14,
     color: '#888888',
+  },
+  archiveButton: {
+    marginTop: 20,
+    padding: 16,
+    backgroundColor: '#1F1F1F',
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  archiveButtonText: {
+    color: '#FF3B3B',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   footer: {
     padding: 20,

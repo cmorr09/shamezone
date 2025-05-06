@@ -10,31 +10,39 @@ import {
   View,
 } from 'react-native';
 import { useSettings } from '../../contexts/SettingsContext';
+import { useGoals } from '../../contexts/GoalsContext';
+import { getGoalsCrushed, getStreakCount, getDaysMissed } from '../../lib/stats';
 
 export default function ProfileScreen() {
   const {
     tone,
-    notificationHour,
-    notificationMinute,
+    time,
     testMode,
     setTestMode,
   } = useSettings();
+
+  const { goals } = useGoals();
+
+  const streak = getStreakCount(goals);
+  const crushed = getGoalsCrushed(goals);
+  const missed = getDaysMissed(goals);
 
   const handleOpenURL = (url: string) => {
     Linking.openURL(url);
   };
 
   const handleDeleteAccount = () => {
-    // TODO: Implement account deletion
     console.log('Delete account');
   };
 
-  const formattedTime =
-    notificationHour !== null && notificationMinute !== null
-      ? `${notificationHour.toString().padStart(2, '0')}:${notificationMinute
-          .toString()
-          .padStart(2, '0')}`
-      : 'Random (7am–11pm)';
+  const formattedTime = (() => {
+    if (time instanceof Date && !isNaN(time.getTime())) {
+      const hours = time.getHours().toString().padStart(2, '0');
+      const minutes = time.getMinutes().toString().padStart(2, '0');
+      return `${hours}:${minutes}`;
+    }
+    return 'Random (7am–11pm)';
+  })();
 
   return (
     <ScrollView style={styles.container}>
@@ -83,19 +91,19 @@ export default function ProfileScreen() {
           <View style={styles.achievementRow}>
             <Text style={styles.achievementEmoji}>🔥</Text>
             <Text style={styles.achievementLabel}>Streak</Text>
-            <Text style={styles.achievementValue}>3 days</Text>
+            <Text style={styles.achievementValue}>{streak} day{streak !== 1 ? 's' : ''}</Text>
           </View>
 
           <View style={styles.achievementRow}>
             <Text style={styles.achievementEmoji}>💪</Text>
             <Text style={styles.achievementLabel}>Goals Crushed</Text>
-            <Text style={styles.achievementValue}>5</Text>
+            <Text style={styles.achievementValue}>{crushed}</Text>
           </View>
 
           <View style={styles.achievementRow}>
             <Text style={styles.achievementEmoji}>🥶</Text>
             <Text style={styles.achievementLabel}>Days Missed</Text>
-            <Text style={styles.achievementValue}>2</Text>
+            <Text style={styles.achievementValue}>{missed}</Text>
           </View>
         </View>
       </View>

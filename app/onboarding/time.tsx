@@ -29,7 +29,7 @@ export default function TimeSelectionScreen() {
     } else {
       setTime(null); // random handling for tryMe or nuclear
     }
-    router.push('/onboarding/goal');
+    router.push('/onboarding/goal' as any);
   };
 
   return (

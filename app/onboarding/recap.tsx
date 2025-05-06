@@ -11,7 +11,7 @@ import {
 import { useGoals } from '../../contexts/GoalsContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { scheduleGoalNotification } from '../../lib/notifications';
-import { setOnboardingComplete } from '../../lib/onboarding'; // ✅ Add this line
+import { setOnboardingComplete } from '../../lib/onboarding';
 
 const { width } = Dimensions.get('window');
 
@@ -29,11 +29,10 @@ const TONE_LABELS = {
 
 export default function RecapScreen() {
   const router = useRouter();
-  const { tone, notificationHour, notificationMinute } = useSettings();
+  const { tone, time, testMode } = useSettings();
   const { goals } = useGoals();
   const goal = goals[0];
 
-  // Animation values
   const fadeAnim = new Animated.Value(0);
   const slideAnim = new Animated.Value(50);
 
@@ -53,15 +52,19 @@ export default function RecapScreen() {
   }, []);
 
   const getTimeDisplay = () => {
-    if (tone === 'soft') {
-      return `${notificationHour.toString().padStart(2, '0')}:${notificationMinute
+    if (tone === 'soft' && time instanceof Date && !isNaN(time.getTime())) {
+      return `${time.getHours().toString().padStart(2, '0')}:${time
+        .getMinutes()
         .toString()
         .padStart(2, '0')}`;
     } else if (tone === 'tryMe') {
-      if (notificationHour === 7) return '7am–10am';
-      if (notificationHour === 10) return '10am–1pm';
-      if (notificationHour === 13) return '1pm–4pm';
-      if (notificationHour === 16) return '4pm–7pm';
+      if (time instanceof Date) {
+        const hour = time.getHours();
+        if (hour === 7) return '7am–10am';
+        if (hour === 10) return '10am–1pm';
+        if (hour === 13) return '1pm–4pm';
+        if (hour === 16) return '4pm–7pm';
+      }
       return 'Random (7am–11pm)';
     } else {
       return 'Random (7am–11pm)';
@@ -119,16 +122,14 @@ export default function RecapScreen() {
         <TouchableOpacity
           style={styles.button}
           onPress={async () => {
-            if (!goal) return;
+            if (!goal || !(time instanceof Date)) return;
 
-            await scheduleGoalNotification(
-              goal,
-              tone,
-              notificationHour,
-              notificationMinute
-            );
+            const hour = time.getHours();
+            const minute = time.getMinutes();
 
-            await setOnboardingComplete(); // ✅ Set onboarding complete flag
+            await scheduleGoalNotification(goal, tone, hour, minute, 1);
+
+            await setOnboardingComplete();
             router.push('/home');
           }}
         >
@@ -218,4 +219,3 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
-

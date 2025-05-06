@@ -32,6 +32,14 @@ function getRandomTimes(count: number): Date[] {
   });
 }
 
+function scheduleTrigger(secondsFromNow: number): Notifications.TimeIntervalTriggerInput {
+  return {
+    type: "timeInterval" as Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+    seconds: secondsFromNow,
+    repeats: false,
+  };
+}
+
 export async function scheduleGoalNotification(
   goal: { id: string; title: string },
   tone: string,
@@ -42,9 +50,15 @@ export async function scheduleGoalNotification(
   if (tone === 'nuclear') {
     const times = getRandomTimes(3);
     for (const time of times) {
-      const triggerDate = new Date();
-      triggerDate.setDate(triggerDate.getDate() + dayOffset);
-      triggerDate.setHours(time.getHours(), time.getMinutes(), 0, 0);
+      const now = new Date();
+      const triggerTime = new Date(now);
+      triggerTime.setDate(triggerTime.getDate() + dayOffset);
+      triggerTime.setHours(time.getHours(), time.getMinutes(), 0, 0);
+
+      const secondsFromNow = Math.max(
+        1,
+        Math.floor((triggerTime.getTime() - now.getTime()) / 1000)
+      );
 
       await Notifications.scheduleNotificationAsync({
         content: {
@@ -52,13 +66,19 @@ export async function scheduleGoalNotification(
           body: getToneMessage(tone, goal.title),
           sound: true,
         },
-        trigger: triggerDate,
+        trigger: scheduleTrigger(secondsFromNow),
       });
     }
   } else {
-    const triggerDate = new Date();
-    triggerDate.setDate(triggerDate.getDate() + dayOffset);
-    triggerDate.setHours(hour, minute, 0, 0);
+    const now = new Date();
+    const triggerTime = new Date(now);
+    triggerTime.setDate(triggerTime.getDate() + dayOffset);
+    triggerTime.setHours(hour, minute, 0, 0);
+
+    const secondsFromNow = Math.max(
+      1,
+      Math.floor((triggerTime.getTime() - now.getTime()) / 1000)
+    );
 
     await Notifications.scheduleNotificationAsync({
       content: {
@@ -66,8 +86,7 @@ export async function scheduleGoalNotification(
         body: getToneMessage(tone, goal.title),
         sound: true,
       },
-      trigger: triggerDate,
+      trigger: scheduleTrigger(secondsFromNow),
     });
   }
 }
-

@@ -1,5 +1,4 @@
 import React, { createContext, ReactNode, useContext, useState } from 'react';
-import { useRouter } from 'expo-router';
 
 export type GoalCategory = 'Work' | 'Health' | 'Personal';
 
@@ -14,7 +13,8 @@ export type Goal = {
   milestones?: string[];
   lastLogged?: Date | null;
   createdAt: Date;
-  archived?: boolean; // NEW
+  archived?: boolean;
+  progressLog?: string[];
 };
 
 type GoalsContextType = {
@@ -22,15 +22,14 @@ type GoalsContextType = {
   setGoals: (goals: Goal[]) => void;
   addGoal: (goal: Goal) => void;
   clearGoals: () => void;
-  updateGoalProgress: (id: string, amount: number) => void;
-  archiveGoal: (id: string) => void; // NEW
+  updateGoalProgress: (id: string, amount: number) => boolean;
+  archiveGoal: (id: string) => void;
 };
 
 const GoalsContext = createContext<GoalsContextType | undefined>(undefined);
 
 export const GoalsProvider = ({ children }: { children: ReactNode }) => {
   const [goals, setGoals] = useState<Goal[]>([]);
-  const router = useRouter();
 
   const addGoal = (goal: Goal) => {
     setGoals((prev) => [...prev, { ...goal, archived: false }]);
@@ -40,25 +39,32 @@ export const GoalsProvider = ({ children }: { children: ReactNode }) => {
     setGoals([]);
   };
 
-  const updateGoalProgress = (id: string, amount: number) => {
+  const updateGoalProgress = (id: string, amount: number): boolean => {
+    const today = new Date().toISOString().split('T')[0];
+    let goalCompleted = false;
+
     setGoals((prev) =>
       prev.map((goal) => {
         if (goal.id !== id) return goal;
 
+        const alreadyLoggedToday = goal.progressLog?.includes(today);
+        if (alreadyLoggedToday) return goal;
+
         const newProgress = Math.min(goal.progress + amount, goal.target);
-        const updatedGoal = {
+        if (newProgress >= goal.target) {
+          goalCompleted = true;
+        }
+
+        return {
           ...goal,
           progress: newProgress,
           lastLogged: new Date(),
+          progressLog: [...(goal.progressLog || []), today],
         };
-
-        if (newProgress >= goal.target) {
-          router.push(`/celebrate/${goal.id}`);
-        }
-
-        return updatedGoal;
       })
     );
+
+    return goalCompleted;
   };
 
   const archiveGoal = (id: string) => {

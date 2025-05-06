@@ -52,7 +52,7 @@ export default function GoalCreationScreen() {
       createdAt: new Date(),
     });
 
-    router.push('/onboarding/recap');
+    router.push('/onboarding/recap' as any);
   };
 
   return (

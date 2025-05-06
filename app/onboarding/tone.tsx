@@ -28,7 +28,7 @@ export default function ToneSelectionScreen() {
   const handleNext = () => {
     if (selectedTone) {
       setTone(selectedTone);
-      router.push('/onboarding/time');
+      router.push('/onboarding/time' as any);
     }
   };
 

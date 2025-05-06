@@ -37,7 +37,7 @@ export default function RootLayout() {
     const checkOnboarding = async () => {
       const complete = await isOnboardingComplete();
       if (!complete) {
-        router.replace('/onboarding');
+        router.replace({ pathname: '/onboarding/index' as any});
       }
       setChecking(false);
     };

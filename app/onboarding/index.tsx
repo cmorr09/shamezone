@@ -34,7 +34,7 @@ export default function OnboardingScreen() {
         <TouchableOpacity
           style={styles.button}
           activeOpacity={0.9}
-          onPress={() => router.push('/onboarding/tone')}
+          onPress={() => router.push('/onboarding/tone' as any)}
         >
           <Text style={styles.buttonText}>Let's Go</Text>
         </TouchableOpacity>

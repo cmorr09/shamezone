@@ -2,12 +2,13 @@ import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useGoals } from '../contexts/GoalsContext';
 
@@ -62,12 +63,21 @@ export default function SetupScreen() {
 
   const handleContinue = () => {
     const filtered = goals.filter(g => g.title.trim() !== '');
+    if (filtered.length === 0) {
+      Alert.alert('Oops', 'Please enter at least one valid goal.');
+      return;
+    }
+
     const formatted = filtered.map((g, i) => ({
       ...g,
       id: String(Date.now() + i),
-      current: 0,
-      lastLogged: null,
+      target: parseFloat(g.target) || 0, // ✅ Safe number parsing
+      progress: 0,
+      time: new Date(),
+      createdAt: new Date(),
+      archived: false,
     }));
+
     setGoals(formatted);
     router.push('/settings/tone');
   };
@@ -117,7 +127,8 @@ export default function SetupScreen() {
           <TouchableOpacity
             style={styles.dateButton}
             onPress={() => {
-              // Date picker logic here
+              // TODO: Implement date picker modal
+              Alert.alert('Coming soon', 'Date picker not yet implemented.');
             }}
           >
             <Text style={styles.dateButtonText}>

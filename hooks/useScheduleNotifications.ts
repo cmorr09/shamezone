@@ -9,7 +9,7 @@ import {
 
 export function useScheduleNotifications() {
   const { goals } = useGoals();
-  const { tone, hour, minute } = useSettings();
+  const { tone, time } = useSettings();
 
   useEffect(() => {
     const run = async () => {
@@ -29,12 +29,20 @@ export function useScheduleNotifications() {
             : null;
 
           if (lastLogged !== dayKey) {
-            await scheduleGoalNotification(goal, tone, hour, minute, dayOffset);
+            if (time instanceof Date && !isNaN(time.getTime())) {
+              const hour = time.getHours();
+              const minute = time.getMinutes();
+              await scheduleGoalNotification(goal, tone, hour, minute, dayOffset);
+            } else {
+              // fallback to current time if time is invalid or null
+              const now = new Date();
+              await scheduleGoalNotification(goal, tone, now.getHours(), now.getMinutes(), dayOffset);
+            }
           }
         }
       }
     };
 
     run();
-  }, [goals, tone, hour, minute]);
+  }, [goals, tone, time]);
 }
