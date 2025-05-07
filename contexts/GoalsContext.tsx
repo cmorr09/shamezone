@@ -1,4 +1,5 @@
 import React, { createContext, ReactNode, useContext, useState } from 'react';
+import { handleError } from '../lib/errorHandling';
 
 export type GoalCategory = 'Work' | 'Health' | 'Personal';
 
@@ -32,7 +33,11 @@ export const GoalsProvider = ({ children }: { children: ReactNode }) => {
   const [goals, setGoals] = useState<Goal[]>([]);
 
   const addGoal = (goal: Goal) => {
-    setGoals((prev) => [...prev, { ...goal, archived: false }]);
+    try {
+      setGoals((prev) => [...prev, { ...goal, archived: false }]);
+    } catch (error) {
+      handleError(error, 'Failed to add goal');
+    }
   };
 
   const clearGoals = () => {
@@ -40,31 +45,36 @@ export const GoalsProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateGoalProgress = (id: string, amount: number): boolean => {
-    const today = new Date().toISOString().split('T')[0];
-    let goalCompleted = false;
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      let goalCompleted = false;
 
-    setGoals((prev) =>
-      prev.map((goal) => {
-        if (goal.id !== id) return goal;
+      setGoals((prev) =>
+        prev.map((goal) => {
+          if (goal.id !== id) return goal;
 
-        const alreadyLoggedToday = goal.progressLog?.includes(today);
-        if (alreadyLoggedToday) return goal;
+          const alreadyLoggedToday = goal.progressLog?.includes(today);
+          if (alreadyLoggedToday) return goal;
 
-        const newProgress = Math.min(goal.progress + amount, goal.target);
-        if (newProgress >= goal.target) {
-          goalCompleted = true;
-        }
+          const newProgress = Math.min(goal.progress + amount, goal.target);
+          if (newProgress >= goal.target) {
+            goalCompleted = true;
+          }
 
-        return {
-          ...goal,
-          progress: newProgress,
-          lastLogged: new Date(),
-          progressLog: [...(goal.progressLog || []), today],
-        };
-      })
-    );
+          return {
+            ...goal,
+            progress: newProgress,
+            lastLogged: new Date(),
+            progressLog: [...(goal.progressLog || []), today],
+          };
+        })
+      );
 
-    return goalCompleted;
+      return goalCompleted;
+    } catch (error) {
+      handleError(error, 'Failed to update goal progress');
+      return false;
+    }
   };
 
   const archiveGoal = (id: string) => {

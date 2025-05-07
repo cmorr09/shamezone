@@ -1,24 +1,69 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Dimensions,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { BrandedLogo } from '../../components/BrandedLogo';
+import { useAuth } from '../../contexts/AuthContext';
 
 const { width } = Dimensions.get('window');
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { signUp } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
-  const isFormValid = email.trim() !== '' && password.trim() !== '';
+  const validateForm = () => {
+    const newErrors: { email?: string; password?: string } = {};
+    
+    if (!email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = 'Invalid email format';
+    }
+    
+    if (!password.trim()) {
+      newErrors.password = 'Password is required';
+    } else if (password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    } else if (!/(?=.*[A-Z])/.test(password)) {
+      newErrors.password = 'Password must contain at least one uppercase letter';
+    } else if (!/(?=.*[0-9])/.test(password)) {
+      newErrors.password = 'Password must contain at least one number';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleRegister = async () => {
+    if (!validateForm()) return;
+
+    try {
+      setLoading(true);
+      await signUp(email, password);
+      Alert.alert(
+        'Success',
+        'Please check your email to verify your account.',
+        [{ text: 'OK', onPress: () => router.replace('/auth/login' as any) }]
+      );
+    } catch (error) {
+      // Error is already handled by AuthContext
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -26,45 +71,57 @@ export default function RegisterScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
+        <View style={styles.logoContainer}>
+          <BrandedLogo size="large" />
+        </View>
         <Text style={styles.heading}>Prove Yourself</Text>
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Email</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, errors.email && styles.inputError]}
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(text) => {
+                setEmail(text);
+                setErrors(prev => ({ ...prev, email: undefined }));
+              }}
               placeholder="Enter your email"
               placeholderTextColor="#888888"
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
             />
+            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
           </View>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Password</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, errors.password && styles.inputError]}
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(text) => {
+                setPassword(text);
+                setErrors(prev => ({ ...prev, password: undefined }));
+              }}
               placeholder="Enter your password"
               placeholderTextColor="#888888"
               secureTextEntry
               autoCapitalize="none"
               autoComplete="password-new"
             />
+            {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
           </View>
         </View>
       </View>
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.button, !isFormValid && styles.buttonDisabled]}
-          disabled={!isFormValid}
+          style={[styles.button, !validateForm() && styles.buttonDisabled]}
+          disabled={!validateForm() || loading}
+          onPress={handleRegister}
         >
-          <Text style={[styles.buttonText, !isFormValid && styles.buttonTextDisabled]}>
+          <Text style={[styles.buttonText, !validateForm() && styles.buttonTextDisabled]}>
             Create Account
           </Text>
         </TouchableOpacity>
@@ -152,5 +209,18 @@ const styles = StyleSheet.create({
   link: {
     color: '#FF3B3B',
     fontWeight: 'bold',
+  },
+  logoContainer: {
+    marginBottom: 32,
+    alignItems: 'center',
+  },
+  inputError: {
+    borderColor: '#FF3B3B',
+    borderWidth: 1,
+  },
+  errorText: {
+    color: '#FF3B3B',
+    fontSize: 12,
+    marginTop: 4,
   },
 });

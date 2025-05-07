@@ -1,6 +1,7 @@
 import Constants from 'expo-constants';
 import React from 'react';
 import {
+  Image,
   Linking,
   ScrollView,
   StyleSheet,
@@ -9,9 +10,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSettings } from '../../contexts/SettingsContext';
 import { useGoals } from '../../contexts/GoalsContext';
-import { getGoalsCrushed, getStreakCount, getDaysMissed } from '../../lib/stats';
+import { useSettings } from '../../contexts/SettingsContext';
+import { getDaysMissed, getGoalsCrushed, getStreakCount } from '../../lib/stats';
 
 export default function ProfileScreen() {
   const {
@@ -49,7 +50,10 @@ export default function ProfileScreen() {
       {/* Profile Header */}
       <View style={styles.header}>
         <View style={styles.avatarContainer}>
-          <Text style={styles.avatar}>👤</Text>
+          <Image
+            source={require('../../assets/images/icon.png')}
+            style={styles.avatar}
+          />
         </View>
         <Text style={styles.displayName}>User Name</Text>
       </View>
@@ -170,7 +174,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   avatar: {
-    fontSize: 40,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
   displayName: {
     fontSize: 24,

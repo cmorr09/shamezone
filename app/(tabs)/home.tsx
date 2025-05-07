@@ -12,6 +12,7 @@ import {
 import nuclearInsults from '../../assets/insults/nuclear.json';
 import softInsults from '../../assets/insults/soft.json';
 import tryMeInsults from '../../assets/insults/tryMe.json';
+import { BrandedLogo } from '../../components/BrandedLogo';
 import { useGoals } from '../../contexts/GoalsContext';
 import { useSettings } from '../../contexts/SettingsContext';
 
@@ -134,6 +135,9 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+        <BrandedLogo size="small" />
+      </View>
       <ScrollView style={styles.scrollView}>
         <Text style={styles.title}>Your Goals</Text>
 
@@ -335,5 +339,11 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  header: {
+    padding: 16,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
   },
 });

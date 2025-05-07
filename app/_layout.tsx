@@ -4,13 +4,16 @@ import * as Notifications from 'expo-notifications';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
+import { ErrorBoundary } from 'react-error-boundary';
 import { View } from 'react-native';
 
+import { AuthProvider } from '../contexts/AuthContext';
 import { GoalsProvider } from '../contexts/GoalsContext';
 import { SettingsProvider } from '../contexts/SettingsContext';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useScheduleNotifications } from '@/hooks/useScheduleNotifications';
+import { BrandedError } from '../components/BrandedError';
 import { isOnboardingComplete } from '../lib/onboarding';
 
 Notifications.setNotificationHandler({
@@ -22,6 +25,15 @@ Notifications.setNotificationHandler({
     shouldShowList: true,
   }),
 });
+
+function ErrorFallback({ error }: { error: Error }) {
+  return (
+    <BrandedError
+      title="Something went wrong"
+      message={error.message}
+    />
+  );
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -37,7 +49,7 @@ export default function RootLayout() {
     const checkOnboarding = async () => {
       const complete = await isOnboardingComplete();
       if (!complete) {
-        router.replace({ pathname: '/onboarding/index' as any});
+        router.replace('/onboarding/index' as any);
       }
       setChecking(false);
     };
@@ -50,17 +62,21 @@ export default function RootLayout() {
   }
 
   return (
-    <SettingsProvider>
-      <GoalsProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="+not-found" />
-          </Stack>
-          <StatusBar style="auto" />
-        </ThemeProvider>
-      </GoalsProvider>
-    </SettingsProvider>
+    <ErrorBoundary FallbackComponent={ErrorFallback}>
+      <AuthProvider>
+        <SettingsProvider>
+          <GoalsProvider>
+            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="+not-found" />
+              </Stack>
+              <StatusBar style="auto" />
+            </ThemeProvider>
+          </GoalsProvider>
+        </SettingsProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

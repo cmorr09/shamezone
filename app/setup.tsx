@@ -62,16 +62,31 @@ export default function SetupScreen() {
   };
 
   const handleContinue = () => {
-    const filtered = goals.filter(g => g.title.trim() !== '');
-    if (filtered.length === 0) {
-      Alert.alert('Oops', 'Please enter at least one valid goal.');
+    const errors: string[] = [];
+
+    goals.forEach((g, index) => {
+      if (!g.title.trim()) {
+        errors.push(`Goal ${index + 1} is missing a title.`);
+      }
+      if (!g.target.trim() || isNaN(Number(g.target)) || Number(g.target) <= 0) {
+        errors.push(`Goal ${index + 1} has an invalid target.`);
+      }
+    });
+
+    if (goals.length === 0) {
+      Alert.alert('Oops', 'You have no goals. Add at least one to continue.');
       return;
     }
 
-    const formatted = filtered.map((g, i) => ({
+    if (errors.length > 0) {
+      Alert.alert('Invalid Goals', errors.join('\n'));
+      return;
+    }
+
+    const formatted = goals.map((g, i) => ({
       ...g,
       id: String(Date.now() + i),
-      target: parseFloat(g.target) || 0, // ✅ Safe number parsing
+      target: Number(g.target),
       progress: 0,
       time: new Date(),
       createdAt: new Date(),
@@ -127,7 +142,6 @@ export default function SetupScreen() {
           <TouchableOpacity
             style={styles.dateButton}
             onPress={() => {
-              // TODO: Implement date picker modal
               Alert.alert('Coming soon', 'Date picker not yet implemented.');
             }}
           >

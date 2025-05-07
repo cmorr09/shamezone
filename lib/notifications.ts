@@ -1,10 +1,18 @@
 import * as Notifications from 'expo-notifications';
+import { handleError } from './errorHandling';
 import { getToneMessage } from './insults';
 
 export async function setupNotificationPermissions() {
-  const { status } = await Notifications.getPermissionsAsync();
-  if (status !== 'granted') {
-    await Notifications.requestPermissionsAsync();
+  try {
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') {
+      const { status: newStatus } = await Notifications.requestPermissionsAsync();
+      if (newStatus !== 'granted') {
+        throw new Error('Notification permissions not granted');
+      }
+    }
+  } catch (error) {
+    handleError(error, 'Failed to setup notifications');
   }
 }
 
@@ -47,13 +55,34 @@ export async function scheduleGoalNotification(
   minute: number,
   dayOffset: number
 ) {
-  if (tone === 'nuclear') {
-    const times = getRandomTimes(3);
-    for (const time of times) {
+  try {
+    if (tone === 'nuclear') {
+      const times = getRandomTimes(3);
+      for (const time of times) {
+        const now = new Date();
+        const triggerTime = new Date(now);
+        triggerTime.setDate(triggerTime.getDate() + dayOffset);
+        triggerTime.setHours(time.getHours(), time.getMinutes(), 0, 0);
+
+        const secondsFromNow = Math.max(
+          1,
+          Math.floor((triggerTime.getTime() - now.getTime()) / 1000)
+        );
+
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: 'ShameZone says:',
+            body: getToneMessage(tone, goal.title),
+            sound: true,
+          },
+          trigger: scheduleTrigger(secondsFromNow),
+        });
+      }
+    } else {
       const now = new Date();
       const triggerTime = new Date(now);
       triggerTime.setDate(triggerTime.getDate() + dayOffset);
-      triggerTime.setHours(time.getHours(), time.getMinutes(), 0, 0);
+      triggerTime.setHours(hour, minute, 0, 0);
 
       const secondsFromNow = Math.max(
         1,
@@ -69,24 +98,7 @@ export async function scheduleGoalNotification(
         trigger: scheduleTrigger(secondsFromNow),
       });
     }
-  } else {
-    const now = new Date();
-    const triggerTime = new Date(now);
-    triggerTime.setDate(triggerTime.getDate() + dayOffset);
-    triggerTime.setHours(hour, minute, 0, 0);
-
-    const secondsFromNow = Math.max(
-      1,
-      Math.floor((triggerTime.getTime() - now.getTime()) / 1000)
-    );
-
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: 'ShameZone says:',
-        body: getToneMessage(tone, goal.title),
-        sound: true,
-      },
-      trigger: scheduleTrigger(secondsFromNow),
-    });
+  } catch (error) {
+    handleError(error, 'Failed to schedule notification');
   }
 }
